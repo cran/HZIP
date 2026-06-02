@@ -2,32 +2,61 @@
 % Please edit documentation in R/envelope.R
 \name{envelope.HZIP}
 \alias{envelope.HZIP}
-\title{Envelope simulation for HZIP Model}
+\title{Envelope Plot for HZIP Models}
 \usage{
-envelope.HZIP(object, nsim = 100, ...)
+envelope.HZIP(object, nsim = 21, method = "ghq", Q = 15, ...)
 }
 \arguments{
-\item{object}{An object of class \code{HZIP}, typically returned by \code{\link{hzip}}.}
+\item{object}{Either an object of class \code{HZIP} (typically
+obtained from \code{\link{hzip}}), or a numeric vector of
+randomized quantile residuals obtained from
+\code{\link{residuals.HZIP}}.}
 
-\item{nsim}{Integer. Number of simulations used to construct the envelope. Default is \code{100}.}
+\item{nsim}{Integer specifying the number of Monte Carlo simulations
+used to construct the simulation envelope. Default is \code{100}.}
+
+\item{method}{Character string passed to \code{\link{residuals.HZIP}}
+when \code{object} is of class \code{HZIP}. One of \code{"ghq"}
+(default) or \code{"laplace"}. Ignored if \code{object} is a
+numeric vector.}
+
+\item{Q}{Integer giving the number of Gauss-Hermite quadrature nodes
+when \code{method = "ghq"}. Default is \code{21}. Ignored if
+\code{object} is a numeric vector or \code{method = "laplace"}.}
 
 \item{...}{Additional arguments (currently ignored).}
 }
 \value{
-Envelope simulation plot.
+A \code{ggplot2} object containing the Q-Q plot with
+  simulation envelope.
 }
 \description{
-Produces a Q-Q plot of residuals from a Hierarchical Zero-Inflated Poisson (HZIP) Model fitted via \code{\link{hzip}}.
+Produces a normal Q-Q plot with a simulation envelope for
+randomized quantile residuals from a Hierarchical Zero-Inflated
+Poisson (HZIP) model fitted via \code{\link{hzip}}.
 }
 \details{
-A simulation envelope is added using Monte Carlo replications.
+The envelope is constructed using Monte Carlo simulation based on
+\code{nsim} replications of independent standard normal samples.
+For each order statistic, the 2.5\% and 97.5\% empirical quantiles
+define the envelope limits.
+
+If \code{object} is of class \code{HZIP}, residuals are computed
+internally via \code{\link{residuals.HZIP}} before plotting.
 }
 \examples{
 \donttest{
-data(salamanders)
-fit.salamander <- hzip(y ~ mined|mined+spp,data = salamanders)
+fit.salamander <- hzip(
+  y ~ mined | mined + spp,
+  data = salamanders
+)
+
+# Passing the fitted object directly
+envelope.HZIP(fit.salamander)
+
+# Or passing residuals explicitly
 res <- residuals(fit.salamander)
-envelope.HZIP(res, nsim = 21)
+envelope.HZIP(res)
 }
 
 }

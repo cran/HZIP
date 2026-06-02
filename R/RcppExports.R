@@ -5,8 +5,8 @@ Kappas <- function(y) {
     .Call(`_HZIP_Kappas`, y)
 }
 
-dLGG <- function(b, mu, sigma, lambda, log = FALSE) {
-    .Call(`_HZIP_dLGG`, b, mu, sigma, lambda, log)
+dLGG <- function(b, mu, sigma, lambda, on_log = FALSE) {
+    .Call(`_HZIP_dLGG`, b, mu, sigma, lambda, on_log)
 }
 
 dPoisLGG <- function(theta2, wi, yi, k, nodes, weights) {
@@ -21,8 +21,8 @@ dBerLGG <- function(theta1, xi, yi, k) {
     .Call(`_HZIP_dBerLGG`, theta1, xi, yi, k)
 }
 
-dZIP <- function(theta1, theta2, xi, wi, yi, Qnodes, Qweights, log = FALSE) {
-    .Call(`_HZIP_dZIP`, theta1, theta2, xi, wi, yi, Qnodes, Qweights, log)
+dZIP <- function(theta1, theta2, xi, wi, yi, Qnodes, Qweights, on_log = FALSE) {
+    .Call(`_HZIP_dZIP`, theta1, theta2, xi, wi, yi, Qnodes, Qweights, on_log)
 }
 
 lvero <- function(theta, xlist, wlist, ylist, Qnodes, Qweights) {

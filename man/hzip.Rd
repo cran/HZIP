@@ -13,33 +13,69 @@ hzip(
   lower = -Inf,
   upper = Inf,
   control = NULL,
+  start = NULL,
+  refine = FALSE,
+  ep_method = c("optim", "numDeriv"),
+  n_starts = 1,
+  verbose = FALSE,
   ...
 )
 }
 \arguments{
 \item{formula}{A two-part \link[Formula]{Formula} of the form
-\code{y ~w_zero + ... | x_count + ... }, where the right-hand side before
-the bar specifies covariates for the zero-inflation component and the right-hand side
-after the bar specifies covariates for the Poisson mean.}
+\code{y ~ w_zero + ... | x_count + ...}, where the right-hand side before
+the bar specifies covariates for the zero-inflation component and the
+right-hand side after the bar specifies covariates for the Poisson mean.}
 
-\item{data}{A \code{data.frame} containing all variables used in \code{formula}
-and a subject identifier named \code{Ind} (one row per observation).}
+\item{data}{A \code{data.frame} containing all variables used in
+\code{formula} and a subject identifier named \code{Ind} (one row per
+observation).}
 
 \item{hessian}{Logical; if \code{TRUE} (default) the observed Hessian at the
-optimum is returned and used to compute standard-error estimates.}
+optimum is computed and used for standard-error estimates.}
 
-\item{method}{Character string passed to \code{\link[stats]{optim}}
-(default \code{"BFGS"}).}
+\item{method}{Character string passed to \code{\link[stats]{optim}} for the
+first optimization stage (default \code{"BFGS"}).}
 
-\item{Q}{Integer; number of Gauss–Hermite nodes for quadrature (default \code{15}).
-Larger values improve accuracy at higher computational cost.}
+\item{Q}{Integer; number of Gauss-Hermite nodes for quadrature
+(default \code{15}). Larger values improve accuracy at higher computational
+cost.}
 
-\item{lower}{Bounds on the variables for the "L-BFGS-B" method, or bounds in which to search for method "Brent" (arguments passed to \code{\link[stats]{optim}}).}
+\item{lower}{Bounds on the variables for the \code{"L-BFGS-B"} method
+(passed to \code{\link[stats]{optim}}).}
 
-\item{upper}{method, or bounds in which to search for method "Brent" (arguments passed to \code{\link[stats]{optim}}).}
+\item{upper}{Bounds on the variables for the \code{"L-BFGS-B"} method
+(passed to \code{\link[stats]{optim}}).}
 
 \item{control}{Optional \code{list} passed to \code{\link[stats]{optim}}'s
 \code{control=} argument (e.g., \code{list(maxit = 500)}).}
+
+\item{start}{Optional numeric vector of initial values of length
+\eqn{p_1 + p_2 + 2} in the order
+\code{c(scale_zero, beta_zero, scale_count, beta_count)}. If \code{NULL}
+(default), initial values are obtained from \code{pscl::zeroinfl} and the
+scales are set to \code{0.5}.}
+
+\item{refine}{Logical; if \code{TRUE}, the BFGS optimum is further refined
+by \code{\link[stats]{nlminb}} (a trust-region Newton method). Useful as
+a safeguard for difficult problems but typically does not improve the
+solution when BFGS already converges. Default \code{FALSE} (BFGS only).}
+
+\item{ep_method}{Character; method used to compute the Hessian for the
+standard errors. Either \code{"optim"} (default; uses the finite-difference
+Hessian computed by \code{\link[stats]{optim}}, fast) or \code{"numDeriv"}
+(uses \code{\link[numDeriv]{hessian}} with Richardson extrapolation, more
+accurate but slower). For most applications the two give virtually identical
+standard errors; \code{"numDeriv"} is recommended only when extra accuracy
+is needed.}
+
+\item{n_starts}{Integer; if greater than \code{1}, performs a multi-start
+procedure with \code{n_starts} perturbations of the initial values and
+keeps the best log-likelihood. Useful for difficult problems with possible
+local optima. Default \code{1} (no multi-start).}
+
+\item{verbose}{Logical; if \code{TRUE}, prints progress information during
+the optimization. Default \code{FALSE}.}
 
 \item{...}{Further arguments passed to \code{\link[stats]{optim}}.}
 }
@@ -51,58 +87,100 @@ An object of class \code{"HZIP"}, a \code{list} with elements:
 \item{coefficients_count}{Estimated coefficients for the count part.}
 \item{scale_zero}{Estimated scale (zero part).}
 \item{scale_count}{Estimated scale (count part).}
-\item{loglik}{Optimized objective value returned by \code{optim}.
-  (Note: depending on \code{lvero}, this may be the negative log-likelihood.)}
-\item{convergence}{\code{optim} convergence code.}
-\item{n}{Number of observations or subjects (see \strong{Note}).}
+\item{loglik}{Maximized log-likelihood.}
+\item{loglikz}{Auxiliary log-likelihood from \code{mlez_hat}.}
+\item{AIC, BIC}{Information criteria based on \code{loglik}.}
+\item{AICz, BICz}{Information criteria based on \code{loglikz}.}
+\item{convergence}{Convergence code (0 = success).}
+\item{n}{Number of observations.}
 \item{m}{Cluster sizes per subject (vector ordered by \code{Ind}).}
-\item{ep}{Approximate standard errors (square roots of the diagonal of the inverse Hessian).}
-\item{iter}{Number of \code{optim} iterations.}
+\item{ep}{Approximate standard errors (square roots of the diagonal of the
+  inverse Hessian).}
+\item{iter}{Number of optimization iterations.}
 \item{method}{Optimization method.}
-\item{optim}{Raw \code{optim} output.}
+\item{refine}{Whether \code{nlminb} refinement was applied.}
+\item{ep_method}{Method used to compute standard errors.}
+\item{n_starts}{Number of starting points used.}
+\item{optim}{Raw output from the final optimization stage.}
 \item{data}{The input \code{data}.}
 }
 \description{
 \code{hzip()} fits a longitudinal/clustered zero-inflated Poisson model with
-subject-level random effects by maximizing a (marginal) likelihood approximated.
-The model uses a two-part \link[Formula]{Formula}:
-\eqn{y ~ \text{zero part} \mid \text{count part}}, where the count intensity
-(Poisson mean) and the zero-inflation probability are linked to (possibly
-different) sets of covariates. Initial values are obtained from
+subject-level random effects following a Generalized Log-Gamma (GLG)
+distribution, by maximizing a marginal likelihood approximated via adaptive
+Gauss-Hermite quadrature. The model uses a two-part \link[Formula]{Formula}:
+\eqn{y \sim \text{zero part} \mid \text{count part}}, where the count
+intensity (Poisson mean) and the zero-inflation probability are linked to
+(possibly different) sets of covariates. Initial values are obtained from
 \code{pscl::zeroinfl(..., dist = "poisson", link = "cloglog")}.
 }
 \details{
-Let \eqn{y_{ij}} denote the count response for subject \eqn{i} at occasion \eqn{j}.
-The HZIP model assumes
+Let \eqn{y_{ij}} denote the count response for subject \eqn{i} at occasion
+\eqn{j}. The HZIP model assumes
 \deqn{P(y_{ij}=0 \mid u_i) = \pi_{ij}(u_i) + \{1-\pi_{ij}(u_i)\}\exp\{-\mu_{ij}(u_i)\},}
 \deqn{P(y_{ij}=k \mid u_i) = \{1-\pi_{ij}(u_i)\}\frac{\mu_{ij}(u_i)^k e^{-\mu_{ij}(u_i)}}{k!},\quad k\ge 1,}
-with linear predictors for the count and zero parts (links typically \code{log}
-for the Poisson mean and \code{cloglog} for the zero-inflation). Subject-specific
-random effects \eqn{u_i} induce within-subject dependence; the marginal likelihood
-is approximated by Gauss–Hermite quadrature with \code{Q} nodes.
+with linear predictors for the count and zero parts (links typically
+\code{log} for the Poisson mean and \code{cloglog} for the zero-inflation).
+Subject-specific random effects \eqn{u_i} follow a GLG distribution and
+induce within-subject dependence; the marginal likelihood is approximated by
+adaptive Gauss-Hermite quadrature with \code{Q} nodes.
+
+\strong{Optimization strategy.} The default workflow is:
+\enumerate{
+  \item Generate initial values from \code{pscl::zeroinfl} (with scales set
+        to a neutral \code{0.5}, ensuring reproducibility);
+  \item Run \code{\link[stats]{optim}} with the specified \code{method}
+        (default BFGS);
+  \item If \code{refine = TRUE}, refine the result with
+        \code{\link[stats]{nlminb}} (off by default; useful for
+        difficult problems);
+  \item If \code{n_starts > 1}, repeat steps 2-3 with perturbed initial
+        values and keep the best log-likelihood;
+  \item Compute standard errors from the inverse Hessian using the method
+        specified by \code{ep_method}.
+}
 }
 \note{
-The subject identifier must be named \code{Ind}. The sign convention for the
-zero-part coefficients in the initial values follows \code{pscl::zeroinfl};
-the internal parameter vector is \code{c(scale_zero, -beta_zero, scale_count, beta_count)}.
-Also verify whether \code{loglik} is the (negative) log-likelihood as returned by
-your objective \code{lvero}; if it is the negative log-likelihood, you may want
-to store \code{logLik = -op$value} for user convenience.
+The subject identifier must be named \code{Ind}. The internal parameter
+vector follows the order
+\code{c(scale_zero, beta_zero, scale_count, beta_count)}.
+
+For difficult problems (e.g., models with many interaction terms), if the
+default fit produces large standard errors or the AIC suggests a worse fit
+than a nested simpler model, try (i) \code{n_starts = 10} for multi-start
+optimization and (ii) supplying \code{start = ...} from a fit of the simpler
+nested model.
 }
 \examples{
 \donttest{
-fit.salamander <- hzip(y ~ mined|mined+spp,data = salamanders)
+# Basic fit
+fit.salamander <- hzip(y ~ mined | mined + spp, data = salamanders)
 summary(fit.salamander)
+
+# More robust fit for difficult problems (multi-start)
+fit.salamander2 <- hzip(y ~ mined | mined + spp + mined:spp,
+                        data = salamanders,
+                        n_starts = 10, verbose = TRUE)
+summary(fit.salamander2)
+
+# Using the simpler model as starting point for the harder one
+init <- with(fit.salamander, c(scale_zero, coefficients_zero,
+                               scale_count, coefficients_count,
+                               rep(0, 6)))  # 6 zeros for the interaction
+fit.salamander3 <- hzip(y ~ mined | mined + spp + mined:spp,
+                        data = salamanders, start = init)
+summary(fit.salamander3)
+
 }
 
 }
 \references{
 Min, Y., & Agresti, A. (2005). Random effect models for repeated measures of
-zero-inflated count data. \emph{Statistical Modelling}, 5(1), 1–19.
+zero-inflated count data. \emph{Statistical Modelling}, 5(1), 1-19.
 
 Jackman, S. (2020). \emph{pscl}: Classes and Methods for R Developed in the
 Political Science Computational Laboratory. R package version 1.5.5.
 
 Zeileis, A., & Croissant, Y. (2010). Extended model formulas in R:
-\emph{Journal of Statistical Software}, 34(1), 1–13. (\pkg{Formula})
+\emph{Journal of Statistical Software}, 34(1), 1-13. (\pkg{Formula})
 }

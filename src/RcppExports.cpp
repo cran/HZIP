@@ -23,8 +23,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // dLGG
-double dLGG(double b, double mu, double sigma, double lambda, bool log);
-RcppExport SEXP _HZIP_dLGG(SEXP bSEXP, SEXP muSEXP, SEXP sigmaSEXP, SEXP lambdaSEXP, SEXP logSEXP) {
+double dLGG(double b, double mu, double sigma, double lambda, bool on_log);
+RcppExport SEXP _HZIP_dLGG(SEXP bSEXP, SEXP muSEXP, SEXP sigmaSEXP, SEXP lambdaSEXP, SEXP on_logSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -32,8 +32,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< double >::type mu(muSEXP);
     Rcpp::traits::input_parameter< double >::type sigma(sigmaSEXP);
     Rcpp::traits::input_parameter< double >::type lambda(lambdaSEXP);
-    Rcpp::traits::input_parameter< bool >::type log(logSEXP);
-    rcpp_result_gen = Rcpp::wrap(dLGG(b, mu, sigma, lambda, log));
+    Rcpp::traits::input_parameter< bool >::type on_log(on_logSEXP);
+    rcpp_result_gen = Rcpp::wrap(dLGG(b, mu, sigma, lambda, on_log));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -84,8 +84,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // dZIP
-double dZIP(NumericVector& theta1, NumericVector& theta2, NumericMatrix& xi, NumericMatrix& wi, IntegerVector& yi, NumericVector& Qnodes, NumericVector& Qweights, bool log);
-RcppExport SEXP _HZIP_dZIP(SEXP theta1SEXP, SEXP theta2SEXP, SEXP xiSEXP, SEXP wiSEXP, SEXP yiSEXP, SEXP QnodesSEXP, SEXP QweightsSEXP, SEXP logSEXP) {
+double dZIP(NumericVector& theta1, NumericVector& theta2, NumericMatrix& xi, NumericMatrix& wi, IntegerVector& yi, NumericVector& Qnodes, NumericVector& Qweights, bool on_log);
+RcppExport SEXP _HZIP_dZIP(SEXP theta1SEXP, SEXP theta2SEXP, SEXP xiSEXP, SEXP wiSEXP, SEXP yiSEXP, SEXP QnodesSEXP, SEXP QweightsSEXP, SEXP on_logSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -96,8 +96,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< IntegerVector& >::type yi(yiSEXP);
     Rcpp::traits::input_parameter< NumericVector& >::type Qnodes(QnodesSEXP);
     Rcpp::traits::input_parameter< NumericVector& >::type Qweights(QweightsSEXP);
-    Rcpp::traits::input_parameter< bool >::type log(logSEXP);
-    rcpp_result_gen = Rcpp::wrap(dZIP(theta1, theta2, xi, wi, yi, Qnodes, Qweights, log));
+    Rcpp::traits::input_parameter< bool >::type on_log(on_logSEXP);
+    rcpp_result_gen = Rcpp::wrap(dZIP(theta1, theta2, xi, wi, yi, Qnodes, Qweights, on_log));
     return rcpp_result_gen;
 END_RCPP
 }

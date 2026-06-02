@@ -2,36 +2,91 @@
 % Please edit documentation in R/residuals.R
 \name{residuals.HZIP}
 \alias{residuals.HZIP}
-\title{Compute Residuals for HZIP Models}
+\title{Residuals for HZIP Models}
 \usage{
-\method{residuals}{HZIP}(object, ...)
+\method{residuals}{HZIP}(object, method = c("ghq", "laplace"), Q = 21, ...)
 }
 \arguments{
-\item{object}{An object of class \code{HZIP}, typically returned from \code{\link{hzip}}.}
+\item{object}{An object of class \code{HZIP}, typically obtained
+from \code{\link{hzip}}.}
 
-\item{...}{Additional arguments (not used).}
+\item{method}{Character string indicating the approximation method
+used to estimate the posterior random effects. Possible values are:
+\describe{
+  \item{\code{"ghq"}}{Gauss-Hermite quadrature approximation.}
+  \item{\code{"laplace"}}{Laplace approximation based on posterior modes.}
+}}
+
+\item{Q}{Integer specifying the number of Gauss-Hermite quadrature
+nodes when \code{method = "ghq"}. Ignored when
+\code{method = "laplace"}.}
+
+\item{...}{Further arguments passed to or from other methods.}
 }
 \value{
-A numeric vector of residuals with length equal to the total number
-  of observations in the dataset.
+A numeric vector containing the randomized quantile residuals.
 }
 \description{
-This function calculates residuals for objects of class \code{HZIP}
-usingrandomized quantile residuals. The computation is performed efficiently
-using C++ functions for predicting random effects and calculating
-residuals.
+Computes randomized quantile residuals for fitted
+\code{HZIP} models.
 }
 \details{
-The function internally groups the data by individual (\code{Ind}), constructs
-model matrices for both zero-inflation and count parts of the model, and then
-calls the C++ functions \code{predict_HZIP_cpp_vec} and \code{r_ij_cpp_vec}
-to efficiently compute the residuals. Random effects are integrated using
-adaptive quadrature based on the supplied \code{nodes} and \code{weights}.
+The residuals are obtained by integrating out the latent random
+effects using either Gauss-Hermite quadrature or a Laplace
+approximation.
+
+
+Let \eqn{Y_{ij}} denote the response variable for the \eqn{j}-th
+observation of the \eqn{i}-th subject. The residuals are computed
+using the randomized quantile residual approach proposed by
+Dunn and Smyth (1996).
+
+For each observation, the conditional cumulative distribution function
+is evaluated as
+
+\deqn{
+F^*(y_{ij}) =
+F(y_{ij} - 1) + U_{ij} P(Y_{ij} = y_{ij}),
+}
+
+where \eqn{U_{ij} \sim \mathrm{Uniform}(0,1)}.
+
+The residuals are then obtained as
+
+\deqn{
+r_{ij} = \Phi^{-1}(F^*(y_{ij})),
+}
+
+where \eqn{\Phi^{-1}(\cdot)} is the standard normal quantile function.
+
+Random effects are approximated through either:
+\itemize{
+  \item Gauss-Hermite quadrature (\code{method = "ghq"});
+  \item Laplace approximation (\code{method = "laplace"}).
+}
+
+The Laplace approximation computes posterior modes using
+\code{\link[stats]{optim}}, while the quadrature approach relies on
+\code{\link[statmod]{gauss.quad}}.
 }
 \examples{
 \donttest{
-fit.salamander <- hzip(y ~ mined|mined+spp,data = salamanders)
-residuals(fit.salamander)
+fit.salamander <- hzip(
+  y ~ mined | mined + spp,
+  data = salamanders
+)
+
+res1 <- residuals(fit.salamander, method = "ghq")
+res2 <- residuals(fit.salamander, method = "laplace")
+
+head(res1)
+head(res2)
 }
 
+}
+\references{
+Dunn, P. K. and Smyth, G. K. (1996).
+Randomized quantile residuals.
+\emph{Journal of Computational and Graphical Statistics},
+5(3), 236--244.
 }
